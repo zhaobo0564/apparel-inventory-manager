@@ -25,11 +25,11 @@ public class HomeManager extends Manager {
         List<Document> list;
         MongoCollection<Document> collection;
 
-        collection = db.getCollection("in_stock");
+        collection = db.getCollection("InStock");
         list = collection.find().into(new ArrayList<>());
         result.setIn_stock_count(list.size());
 
-        collection = db.getCollection("out_stock");
+        collection = db.getCollection("OutStock");
         list = collection.find().into(new ArrayList<>());
         result.setOut_stock_count(list.size());
 
@@ -37,7 +37,11 @@ public class HomeManager extends Manager {
         list = collection.find().into(new ArrayList<>());
         result.setCargo_type_count(list.size());
 
-        result.setCargo_count(0);
+        int total = 0;
+        for(Document doc:list) {
+            total += Integer.parseInt(doc.get("count").toString());
+        }
+        result.setCargo_count(total);
 
         return result;
     }

@@ -5,8 +5,8 @@ import lombok.Data;
 import java.util.ArrayList;
 
 @Data
-public class ReturnState {
-    private String state;
-    private String token;
-    private ArrayList<String> fail;
+public class Stock {
+    private String id;
+    private String date;
+    private ArrayList<Cargo> cargos;
 }
