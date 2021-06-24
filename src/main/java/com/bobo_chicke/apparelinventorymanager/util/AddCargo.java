@@ -4,5 +4,8 @@ import lombok.Data;
 
 @Data
 public class AddCargo {
+    private String token;
     private String name;
+    private String type;
+    private String manufacturer;
 }

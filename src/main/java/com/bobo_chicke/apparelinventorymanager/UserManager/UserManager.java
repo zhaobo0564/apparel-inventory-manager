@@ -32,9 +32,7 @@ public class UserManager extends Manager {
 
         try {
             res = MD5.getResult(res);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
+        } catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
             e.printStackTrace();
         }
 
@@ -55,6 +53,8 @@ public class UserManager extends Manager {
             String token = GeneraterToken(loginuser);
             res.setToken(token);
             Document Doc = documents.get(0);
+            jedis.set(loginuser.getUsername(), token);
+            jedis.expire(loginuser.getUsername(), 60 * 30);
             jedis.set(token, Doc.get("auth").toString());
             jedis.expire(token, 60 * 30);
         } else {
@@ -65,14 +65,11 @@ public class UserManager extends Manager {
     }
 
     @PostMapping(path = "/logout", consumes = "application/json", produces = "application/json")
-    public ReturnState logout(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if(cookies != null){
-            for(Cookie cookie : cookies){
-                if(cookie.getName().equals("sessionId")){
-                   jedis.del(cookie.getValue());
-                }
-            }
+    public ReturnState logout(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CheckToken checktoken = objectMapper.readValue(str, CheckToken.class);
+        if (jedis.exists(checktoken.getToken())) {
+            jedis.del(checktoken.getToken());
         }
         ReturnState res = new ReturnState();
         res.setState("ok");
@@ -98,8 +95,17 @@ public class UserManager extends Manager {
         return res;
     }
 
-    @GetMapping(path = "/GetUser")
-    public ArrayList<UserInfo> GetUser() throws JsonProcessingException {
+    @PostMapping(path = "/GetUser", consumes = "application/json", produces = "application/json")
+    public UserList GetUser(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CheckToken checktoken = objectMapper.readValue(str, CheckToken.class);
+        String state = super.checkToken(checktoken.getToken(), "admin");
+        UserList result = new UserList();
+        if (!state.equals("ok")) {
+            result.setState(state);
+            return result;
+        }
+
         MongoCollection<Document> collection;
         collection = db.getCollection("User");
         ArrayList<Document> query = collection.find().into(new ArrayList<Document>());
@@ -110,11 +116,12 @@ public class UserManager extends Manager {
             }
             q.remove("_id");
             q.remove("password");
-            ObjectMapper objectMapper = new ObjectMapper();
             UserInfo userinfo = objectMapper.readValue(q.toJson(), new TypeReference<UserInfo>(){});
             res.add(userinfo);
         }
-        return res;
+        result.setUserlist(res);
+        result.setState("ok");
+        return result;
     }
 
     @PostMapping(path = "/ChangAuth", consumes = "application/json", produces = "application/json")
@@ -122,12 +129,22 @@ public class UserManager extends Manager {
         ObjectMapper objectMapper = new ObjectMapper();
         ChangAuth changauth = objectMapper.readValue(str, new TypeReference<ChangAuth>(){});
 
+        String state = super.checkToken(changauth.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
         Document tmp = new Document();
         tmp.append("$set", new Document("auth", changauth.getAuth()));
 
         db.getCollection("User").updateOne(new Document("username", changauth.getUsername()), tmp);
 
-        ReturnState res = new ReturnState();
+        if(jedis.exists(changauth.getUsername())) {
+            jedis.set(jedis.get(changauth.getUsername()), changauth.getAuth());
+        }
+
         res.setState("ok");
 
         return res;
@@ -137,8 +154,21 @@ public class UserManager extends Manager {
     public ReturnState Delete(@RequestBody String str) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         ChangAuth changauth = objectMapper.readValue(str, new TypeReference<ChangAuth>(){});
-        db.getCollection("User").deleteOne(new Document("username", changauth.getUsername()));
+
+        String state = super.checkToken(changauth.getToken(), "superadmin");
         ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
+        db.getCollection("User").deleteOne(new Document("username", changauth.getUsername()));
+
+        if(jedis.exists(changauth.getUsername())) {
+            jedis.del(jedis.get(changauth.getUsername()));
+            jedis.del(changauth.getUsername());
+        }
+
         res.setState("ok");
         return res;
     }

@@ -23,25 +23,43 @@ public class StockManager extends Manager {
         super();
     }
 
-    @GetMapping("/GetInStock")
-    public ArrayList<Stock> GetInStock() throws JsonProcessingException {
+    @PostMapping(path = "/GetInStock", consumes = "application/json", produces = "application/json")
+    public GetStock GetInStock(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CheckToken checktoken = objectMapper.readValue(str, CheckToken.class);
+        String state = super.checkToken(checktoken.getToken(), "user");
+        GetStock res = new GetStock();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
         MongoCollection<Document> collection;
         collection = db.getCollection("InStock");
         ArrayList<Document> query = collection.find().into(new ArrayList<Document>());
-        ArrayList<Stock> res = new ArrayList<Stock>();
+        ArrayList<Stock> result = new ArrayList<Stock>();
         for (Document q:query) {
             q.remove("_id");
-            ObjectMapper objectMapper = new ObjectMapper();
             Stock stock = objectMapper.readValue(q.toJson(), new TypeReference<Stock>(){});
-            res.add(stock);
+            result.add(stock);
         }
+
+        res.setState("ok");
+        res.setStocks(result);
         return res;
     }
 
     @PostMapping(path = "/AddInStock", consumes = "application/json", produces = "application/json")
     public ReturnState AddInStock(@RequestBody String str) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
-        ArrayList<Cargo> addinstock = objectMapper.readValue(str, new TypeReference<ArrayList<Cargo>>(){});
+        AddStock addinstock = objectMapper.readValue(str, new TypeReference<AddStock>(){});
+
+        String state = super.checkToken(addinstock.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
 
         MongoCollection<Document> collection;
         collection = db.getCollection("InStock");
@@ -57,7 +75,7 @@ public class StockManager extends Manager {
 
         Document Insert = new Document();
         ArrayList<Document> cargolist = new ArrayList<Document>();
-        for(Cargo cargo:addinstock) {
+        for(Cargo cargo:addinstock.getCargos()) {
             Document tmp = new Document();
             tmp.append("id", cargo.getId());
             tmp.append("name", cargo.getName());
@@ -76,30 +94,47 @@ public class StockManager extends Manager {
 
         db.getCollection("InStock").insertOne(Insert);
 
-        ReturnState res = new ReturnState();
         res.setState("ok");
         return res;
     }
 
-    @GetMapping("/GetOutStock")
-    public ArrayList<Stock> OutInStock() throws JsonProcessingException {
+    @PostMapping(path = "/GetOutStock", consumes = "application/json", produces = "application/json")
+    public GetStock GetOutStock(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CheckToken checktoken = objectMapper.readValue(str, CheckToken.class);
+        String state = super.checkToken(checktoken.getToken(), "user");
+        GetStock res = new GetStock();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
         MongoCollection<Document> collection;
         collection = db.getCollection("OutStock");
         ArrayList<Document> query = collection.find().into(new ArrayList<Document>());
-        ArrayList<Stock> res = new ArrayList<Stock>();
+        ArrayList<Stock> result = new ArrayList<Stock>();
         for (Document q:query) {
             q.remove("_id");
-            ObjectMapper objectMapper = new ObjectMapper();
             Stock stock = objectMapper.readValue(q.toJson(), new TypeReference<Stock>(){});
-            res.add(stock);
+            result.add(stock);
         }
+
+        res.setState("ok");
+        res.setStocks(result);
         return res;
     }
 
     @PostMapping(path = "/AddOutStock", consumes = "application/json", produces = "application/json")
     public ReturnState AddOutStock(@RequestBody String str) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
-        ArrayList<Cargo> addinstock = objectMapper.readValue(str, new TypeReference<ArrayList<Cargo>>(){});
+        AddStock addoutstock = objectMapper.readValue(str, new TypeReference<AddStock>(){});
+
+        String state = super.checkToken(addoutstock.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
 
         MongoCollection<Document> collection;
         collection = db.getCollection("OutStock");
@@ -115,7 +150,7 @@ public class StockManager extends Manager {
 
         Document Insert = new Document();
         ArrayList<Document> cargolist = new ArrayList<Document>();
-        for(Cargo cargo:addinstock) {
+        for(Cargo cargo:addoutstock.getCargos()) {
             Document tmp = new Document();
             tmp.append("id", cargo.getId());
             tmp.append("name", cargo.getName());
@@ -137,7 +172,6 @@ public class StockManager extends Manager {
 
         db.getCollection("OutStock").insertOne(Insert);
 
-        ReturnState res = new ReturnState();
         res.setState("ok");
         return res;
     }

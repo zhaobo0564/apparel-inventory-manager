@@ -1,7 +1,11 @@
 package com.bobo_chicke.apparelinventorymanager.HomeManager;
 
 import com.bobo_chicke.apparelinventorymanager.Manager;
+import com.bobo_chicke.apparelinventorymanager.util.CheckToken;
+import com.bobo_chicke.apparelinventorymanager.util.GetStock;
 import com.bobo_chicke.apparelinventorymanager.util.MainData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.client.*;
 
 import org.bson.Document;
@@ -19,9 +23,17 @@ public class HomeManager extends Manager {
        super();
     }
 
-    @GetMapping("/Get")
-    public MainData GetMainInformation() {
+    @PostMapping(path = "/Get", consumes = "application/json", produces = "application/json")
+    public MainData GetMainInformation(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        CheckToken checktoken = objectMapper.readValue(str, CheckToken.class);
+        String state = super.checkToken(checktoken.getToken(), "user");
         MainData result = new MainData();
+        if (!state.equals("ok")) {
+            result.setState(state);
+            return result;
+        }
+
         List<Document> list;
         MongoCollection<Document> collection;
 
@@ -42,6 +54,8 @@ public class HomeManager extends Manager {
             total += Integer.parseInt(doc.get("count").toString());
         }
         result.setCargo_count(total);
+
+        result.setState("ok");
 
         return result;
     }
