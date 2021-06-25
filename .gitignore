@@ -34,3 +34,4 @@ build/
 src/main/META-INF/MANIFEST.MF
 src/main/resources/META-INF/MANIFEST.MF
 out/artifacts/apparel_inventory_manager_jar/apparel-inventory-manager.jar
+docker/apparel-inventory-manager.jar
