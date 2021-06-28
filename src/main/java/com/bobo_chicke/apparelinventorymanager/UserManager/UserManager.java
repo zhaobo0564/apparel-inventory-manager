@@ -165,11 +165,50 @@ public class UserManager extends Manager {
         db.getCollection("User").deleteOne(new Document("username", changauth.getUsername()));
 
         if(jedis.exists(changauth.getUsername())) {
-            jedis.del(jedis.get(changauth.getUsername()));
+            if (jedis.exists(jedis.get(changauth.getUsername()))){
+                jedis.del(jedis.get(changauth.getUsername()));
+            }
             jedis.del(changauth.getUsername());
         }
 
         res.setState("ok");
+        return res;
+    }
+
+    @PostMapping(path = "/ChangePassword", consumes = "application/json", produces = "application/json")
+    public ReturnState ChangePassword(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        ChangPass changpass = objectMapper.readValue(str, new TypeReference<ChangPass>(){});
+
+        Document doc = new Document();
+        doc.append("username", changpass.getUsername());
+        ArrayList<Document> documents = db.getCollection("User").find(doc).into(new ArrayList<Document>());
+        ReturnState res = new ReturnState();
+        if(documents.size() == 0){
+            res.setState("usererror");
+            return res;
+        }
+
+        doc.append("password", changpass.getPassword());
+        documents = db.getCollection("User").find(doc).into(new ArrayList<Document>());
+        if(documents.size() == 0){
+            res.setState("passerror");
+            return res;
+        }
+
+        Document tmp = new Document();
+        tmp.append("$set", new Document("password", changpass.getNewpassword()));
+        db.getCollection("User").updateOne(doc, tmp);
+
+        if(jedis.exists(changpass.getUsername())) {
+            if (jedis.exists(jedis.get(changpass.getUsername()))){
+                jedis.del(jedis.get(changpass.getUsername()));
+            }
+            jedis.del(changpass.getUsername());
+        }
+
+        res.setState("ok");
+
         return res;
     }
 }
