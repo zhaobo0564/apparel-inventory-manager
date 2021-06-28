@@ -7,5 +7,6 @@ import java.util.ArrayList;
 @Data
 public class AddStock {
     private String token;
+    private String remarks;
     private ArrayList<Cargo> cargos;
 }

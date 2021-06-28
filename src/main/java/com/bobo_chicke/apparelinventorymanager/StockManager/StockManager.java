@@ -41,6 +41,25 @@ public class StockManager extends Manager {
         for (Document q:query) {
             q.remove("_id");
             Stock stock = objectMapper.readValue(q.toJson(), new TypeReference<Stock>(){});
+            ArrayList<Cargo> cargos = new ArrayList<Cargo>();
+            for (Cargo cargo: stock.getCargos()){
+                ArrayList<Document> tmp = db.getCollection("cargo").find(new Document("id", cargo.getId())).into(new ArrayList<Document>());
+                for(Document doc:tmp) {
+                    Cargo t = new Cargo();
+                    t.setId(doc.get("id").toString());
+                    t.setName(doc.get("name").toString());
+                    t.setColor(doc.get("color").toString());
+                    t.setMaterial(doc.get("material").toString());
+                    t.setSize(doc.get("size").toString());
+                    t.setExfactoryprice(doc.get("exfactoryprice").toString());
+                    t.setRetailprice(doc.get("retailprice").toString());
+                    t.setManufacturer(doc.get("manufacturer").toString());
+                    t.setCount(cargo.getCount());
+                    cargos.add(t);
+                }
+            }
+            stock.setCargos(cargos);
+            stock.setRemarks(stock.getRemarks());
             result.add(stock);
         }
 
@@ -78,7 +97,6 @@ public class StockManager extends Manager {
         for(Cargo cargo:addinstock.getCargos()) {
             Document tmp = new Document();
             tmp.append("id", cargo.getId());
-            tmp.append("name", cargo.getName());
             tmp.append("count", cargo.getCount());
             cargolist.add(tmp);
             Document inc = new Document();
@@ -90,6 +108,7 @@ public class StockManager extends Manager {
         sdf.applyPattern("yyyy-MM-dd HH:mm:ss a");
         Date date = new Date();
         Insert.append("date", sdf.format(date));
+        Insert.append("remarks", addinstock.getRemarks());
         Insert.append("cargos", cargolist);
 
         db.getCollection("InStock").insertOne(Insert);
@@ -116,6 +135,25 @@ public class StockManager extends Manager {
         for (Document q:query) {
             q.remove("_id");
             Stock stock = objectMapper.readValue(q.toJson(), new TypeReference<Stock>(){});
+            ArrayList<Cargo> cargos = new ArrayList<Cargo>();
+            for (Cargo cargo: stock.getCargos()){
+                ArrayList<Document> tmp = db.getCollection("cargo").find(new Document("id", cargo.getId())).into(new ArrayList<Document>());
+                for(Document doc:tmp) {
+                    Cargo t = new Cargo();
+                    t.setId(doc.get("id").toString());
+                    t.setName(doc.get("name").toString());
+                    t.setColor(doc.get("color").toString());
+                    t.setMaterial(doc.get("material").toString());
+                    t.setSize(doc.get("size").toString());
+                    t.setExfactoryprice(doc.get("exfactoryprice").toString());
+                    t.setRetailprice(doc.get("retailprice").toString());
+                    t.setManufacturer(doc.get("manufacturer").toString());
+                    t.setCount(cargo.getCount());
+                    cargos.add(t);
+                }
+            }
+            stock.setCargos(cargos);
+            stock.setRemarks(stock.getRemarks());
             result.add(stock);
         }
 
@@ -153,7 +191,6 @@ public class StockManager extends Manager {
         for(Cargo cargo:addoutstock.getCargos()) {
             Document tmp = new Document();
             tmp.append("id", cargo.getId());
-            tmp.append("name", cargo.getName());
             tmp.append("count", cargo.getCount());
             cargolist.add(tmp);
             Document inc = new Document();
@@ -168,9 +205,50 @@ public class StockManager extends Manager {
         sdf.applyPattern("yyyy-MM-dd HH:mm:ss a");
         Date date = new Date();
         Insert.append("date", sdf.format(date));
+        Insert.append("remarks", addoutstock.getRemarks());
         Insert.append("cargos", cargolist);
 
         db.getCollection("OutStock").insertOne(Insert);
+
+        res.setState("ok");
+        return res;
+    }
+
+    @PostMapping(path = "/UpdateInStock", consumes = "application/json", produces = "application/json")
+    public ReturnState UpdateInStock(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        UpdateRmarks updateremarks = objectMapper.readValue(str, new TypeReference<UpdateRmarks>(){});
+
+        String state = super.checkToken(updateremarks.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
+        Document doc = new Document();
+        doc.append("$set", new Document("remarks", updateremarks.getRemarks()));
+        db.getCollection("InStock").updateOne(new Document("id", updateremarks.getId()), doc);
+
+        res.setState("ok");
+        return res;
+    }
+
+    @PostMapping(path = "/UpdateOutStock", consumes = "application/json", produces = "application/json")
+    public ReturnState UpdateOutStock(@RequestBody String str) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        UpdateRmarks updateremarks = objectMapper.readValue(str, new TypeReference<UpdateRmarks>(){});
+
+        String state = super.checkToken(updateremarks.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
+        Document doc = new Document();
+        doc.append("$set", new Document("remarks", updateremarks.getRemarks()));
+        db.getCollection("OutStock").updateOne(new Document("id", updateremarks.getId()), doc);
 
         res.setState("ok");
         return res;

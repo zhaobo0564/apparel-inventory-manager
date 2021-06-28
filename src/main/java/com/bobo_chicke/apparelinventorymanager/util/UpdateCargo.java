@@ -3,8 +3,9 @@ package com.bobo_chicke.apparelinventorymanager.util;
 import lombok.Data;
 
 @Data
-public class AddCargo {
+public class UpdateCargo {
     private String token;
+    private String id;
     private String name;
     private String color;
     private String material;

@@ -75,13 +75,71 @@ public class CargoManager extends Manager {
 
         ins_doc.append("id", id);
         ins_doc.append("name", addcargo.getName());
-        ins_doc.append("type", addcargo.getType());
+        ins_doc.append("color", addcargo.getColor());
+        ins_doc.append("material", addcargo.getMaterial());
+        ins_doc.append("size", addcargo.getSize());
+        ins_doc.append("exfactoryprice", addcargo.getExfactoryprice());
+        ins_doc.append("retailprice", addcargo.getRetailprice());
         ins_doc.append("manufacturer", addcargo.getManufacturer());
         ins_doc.append("count", 0);
 
-        query = collection.find(eq("name", addcargo.getName())).into(new ArrayList<Document>());
+        Document tmp = new Document();
+        tmp.append("name", addcargo.getName());
+        tmp.append("color", addcargo.getColor());
+        tmp.append("material", addcargo.getMaterial());
+        tmp.append("size", addcargo.getSize());
+
+        query = collection.find(tmp).into(new ArrayList<Document>());
         if(query.size() == 0){
             collection.insertOne(ins_doc);
+            res.setState("ok");
+            return res;
+        } else {
+            res.setState("error");
+            return res;
+        }
+    }
+
+    @PostMapping(path = "/Update", consumes = "application/json", produces = "application/json")
+    public ReturnState UpdateCargo(@RequestBody String str) throws IOException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        UpdateCargo updatecargo = objectMapper.readValue(str, UpdateCargo.class);
+
+        String state = super.checkToken(updatecargo.getToken(), "admin");
+        ReturnState res = new ReturnState();
+        if (!state.equals("ok")) {
+            res.setState(state);
+            return res;
+        }
+
+        Document tmp_doc = new Document();
+
+        MongoCollection<Document> collection;
+        collection = db.getCollection("cargo");
+
+        String id = updatecargo.getId();
+
+        tmp_doc.append("name", updatecargo.getName());
+        tmp_doc.append("color", updatecargo.getColor());
+        tmp_doc.append("material", updatecargo.getMaterial());
+        tmp_doc.append("size", updatecargo.getSize());
+        tmp_doc.append("exfactoryprice", updatecargo.getExfactoryprice());
+        tmp_doc.append("retailprice", updatecargo.getRetailprice());
+        tmp_doc.append("manufacturer", updatecargo.getManufacturer());
+
+        Document tmp = new Document();
+        tmp.append("id", new Document("$ne", updatecargo.getId()));
+        tmp.append("name", updatecargo.getName());
+        tmp.append("color", updatecargo.getColor());
+        tmp.append("material", updatecargo.getMaterial());
+        tmp.append("size", updatecargo.getSize());
+
+        ArrayList<Document> query = collection.find(tmp).into(new ArrayList<Document>());
+        if(query.size() == 0){
+            Document update_doc = new Document();
+            update_doc.append("$set", tmp_doc);
+
+            collection.updateOne(new Document("id", updatecargo.getId()), update_doc);
             res.setState("ok");
             return res;
         } else {
